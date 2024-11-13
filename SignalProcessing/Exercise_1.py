@@ -191,42 +191,98 @@ current_dir = os.getcwd()
 ## Convolution
 #################
 
-x1 = np.array([0, 1, 0, 0, 0, 0])
-x2 = np.array([0, 1, 0, 0, 1, 0])
-x3 = 2 * np.sin(np.arange(0, 2 * np.pi, 0.1))
+# x1 = np.array([0, 1, 0, 0, 0, 0])
+# x2 = np.array([0, 1, 0, 0, 1, 0])
+# x3 = 2 * np.sin(np.arange(0, 2 * np.pi, 0.1))
+#
+# # Define system impulse response
+# h = np.array([-1, 1, 3, 5, 3, 1, -1, -3])
+#
+# # Perform discrete convolution for each input
+# y1 = np.convolve(x1, h, mode='full')
+# y2 = np.convolve(x2, h, mode='full')
+# y3 = np.convolve(x3, h, mode='full')
+#
+# # Plot outputs in the time domain
+# fig, axs = plt.subplots(3, 1, figsize=(12, 6))
+# axs[0].stem(y1)
+# axs[0].set_ylabel('y1[n]')
+# axs[1].stem(y2)
+# axs[1].set_ylabel('y2[n]')
+# axs[2].stem(y3)
+# axs[2].set_xlabel('n')
+# axs[2].set_ylabel('y3[n]')
+#
+# plt.tight_layout()
+# #plt.show()
+# fig.savefig("P2_1.eps", format="eps", dpi=300)
+#
+#
+# h2 = [-5, 2, 4, 1, 0, 10, 1, -3, 2]
+# y4 = np.convolve(x1, h2, mode='full')
+#
+# fig, axs = plt.subplots(1, 1, figsize=(12, 3))
+# axs.stem(y4)
+# axs.set_ylabel('y4[n]')
+# axs.set_xlabel('n')
+#
+# plt.tight_layout()
+# #plt.show()
+# fig.savefig("P2_2.eps", format="eps", dpi=300)
+#
+# y5 = np.convolve(x1+x2, h, mode='full')
+# y6 = y1 + y2
+#
+# fig, axs = plt.subplots(2, 1, figsize=(12, 3))
+# axs[0].stem(y5)
+# axs[1].stem(y6)
+# axs[0].set_ylabel('y[n]')
+# axs[1].set_ylabel('y[n]')
+# axs[0].set_xlabel('n')
+# axs[1].set_xlabel('n')
+#
+# plt.tight_layout()
+# plt.show()
 
-# Define system impulse response
-h = np.array([-1, 1, 3, 5, 3, 1, -1, -3])
 
-# Perform discrete convolution for each input
-y1 = np.convolve(x1, h, mode='full')
-y2 = np.convolve(x2, h, mode='full')
-y3 = np.convolve(x3, h, mode='full')
+T = 1.001  # period of response observation
+n = 5
 
-# Plot outputs in the time domain
+t = np.arange(0, T, 0.001)  # time vector
+
+h_t = np.sin(100 * t) * np.exp(-n * t)
+
+input_signal = np.zeros_like(t)
+input_signal[100] = 1  # Impulse at 100ms (index 100 corresponds to 100ms)
+
+y_t = np.convolve(input_signal, h_t, mode='full') * (t[1] - t[0])  # Scaling by dt
+#output_time = np.arange(0, len(y_t) * 0.001, 0.001)  # Extend time vector for full convolution output
+y_t_trimmed = y_t[:len(t)]
+
 plt.figure(figsize=(12, 8))
 
-# y1
+# Input plot
 plt.subplot(3, 1, 1)
-plt.stem(y1)
-plt.title('Output y1 from input x1')
-plt.xlabel('n')
-plt.ylabel('y1[n]')
+plt.plot(t, input_signal)
+plt.title("Impulse Input Signal")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude")
 
-# y2
+# Impulse Response plot
 plt.subplot(3, 1, 2)
-plt.stem(y2)
-plt.title('Output y2 from input x2')
-plt.xlabel('n')
-plt.ylabel('y2[n]')
+plt.plot(t, h_t)
+plt.title("Impulse Response h(t)")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude")
 
-# y3
+# Output plot
 plt.subplot(3, 1, 3)
-plt.stem(y3)
-plt.title('Output y3 from input x3')
-plt.xlabel('n')
-plt.ylabel('y3[n]')
+plt.plot(t, y_t_trimmed)
+plt.title("System Output y(t)")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude")
 
 plt.tight_layout()
 plt.show()
+
 
