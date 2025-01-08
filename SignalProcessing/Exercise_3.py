@@ -273,133 +273,178 @@ from scipy.io import loadmat
 #
 
 
-# Part 3
-#########
+# # Part 3
+# #########
+#
+# # Define the signal
+# fs = 1000  # Sampling frequency (Hz)
+# f = 10     # Frequency of sinusoid (Hz)
+# t = np.arange(1, 64001) / fs  # Time vector
+# x = np.sin(2 * np.pi * f * t) + np.random.randn(len(t)) / 10  # Noisy sinusoid
+#
+# # Block sizes
+# NFFT_1 = 100
+# NFFT_2 = 400
+#
+# # Perform FFT for NFFT = 100
+# fft_result_100 = np.fft.rfft(x[:NFFT_1], NFFT_1)
+# frequencies_100 = np.fft.rfftfreq(NFFT_1, d=1/fs)
+# magnitude_spectrum_100 = np.abs(fft_result_100)
+#
+# # Perform FFT for NFFT = 400
+# fft_result_400 = np.fft.rfft(x[:NFFT_2], NFFT_2)
+# frequencies_400 = np.fft.rfftfreq(NFFT_2, d=1/fs)
+# magnitude_spectrum_400 = np.abs(fft_result_400)
+#
+# # Plot the spectra
+# plt.figure(figsize=(12, 6))
+# plt.subplot(2, 1, 1)
+# plt.plot(frequencies_100, magnitude_spectrum_100, label='NFFT = 100')
+# plt.plot(frequencies_400, magnitude_spectrum_400, label='NFFT = 400')
+# plt.xlabel('Frequency (Hz)')
+# plt.ylabel('Magnitude')
+# plt.title('Sinusoid signal')
+# plt.legend()
+# plt.grid()
+#
+# # Load the MATLAB .mat file
+# data = loadmat('ImpTube12.mat')
+# Mic12 = data['Mic12']
+# fs = int(data['fs'][0, 0])  # Sampling frequency
+#
+# # Select the first microphone signal (first column of Mic12)
+# signal = Mic12[:, 0]
+#
+# # Block sizes
+# NFFT_1 = 1024
+# NFFT_2 = 8192
+#
+# # Perform FFT for NFFT = 1024
+# fft_result_1024 = np.fft.rfft(signal[:NFFT_1], NFFT_1)
+# frequencies_1024 = np.fft.rfftfreq(NFFT_1, d=1/fs)
+# magnitude_spectrum_1024 = np.abs(fft_result_1024)
+#
+# # Perform FFT for NFFT = 8192
+# fft_result_8192 = np.fft.rfft(signal[:NFFT_2], NFFT_2)
+# frequencies_8192 = np.fft.rfftfreq(NFFT_2, d=1/fs)
+# magnitude_spectrum_8192 = np.abs(fft_result_8192)
+#
+# # Plot the spectra
+# plt.subplot(2, 1, 2)
+# plt.plot(frequencies_8192, magnitude_spectrum_8192, label='NFFT = 8192')
+# plt.plot(frequencies_1024, magnitude_spectrum_1024, label='NFFT = 1024')
+# plt.xlabel('Frequency (Hz)')
+# plt.ylabel('Magnitude')
+# plt.title('Microphone signal')
+# plt.legend()
+# plt.grid(True)
+#
+# plt.tight_layout()
+# plt.savefig('E3_P3_1.eps', format='eps')
+# plt.show()
+#
+# # Generate the sinusoidal signal with added noise
+# f = 10  # Frequency in Hz
+# t = np.arange(1, 64001) / 1000  # Time vector (1 ms sampling rate)
+# x = np.sin(2 * np.pi * f * t) + np.random.randn(len(t)) / 10  # Signal with noise
+#
+# # Define the block sizes for PSD estimation
+# NFFT_1 = 100
+# NFFT_2 = 400
+#
+# # Calculate the PSD for NFFT = 100
+# f_1, Pxx_1 = welch(x, fs=1000, window=np.hanning(NFFT_1), nperseg=NFFT_1, noverlap=int(NFFT_1 * 0.5), scaling='density')
+#
+# # Calculate the PSD for NFFT = 400
+# f_2, Pxx_2 = welch(x, fs=1000, window=np.hanning(NFFT_2), nperseg=NFFT_2, noverlap=int(NFFT_2 * 0.5), scaling='density')
+#
+# # Plot the two spectra in the same figure
+# plt.figure(figsize=(12, 6))
+# plt.subplot(2, 1, 1)
+# plt.semilogy(f_1, Pxx_1, label='NFFT = 100')
+# plt.semilogy(f_2, Pxx_2, label='NFFT = 400')
+# plt.title('PSD of sinusoidal signal')
+# plt.xlabel('Frequency (Hz)')
+# plt.ylabel('PSD (dB/Hz)')
+# plt.legend()
+# plt.grid(True)
+#
+# data = loadmat('ImpTube12.mat')
+# Mic12 = data['Mic12']
+# fs = int(data['fs'][0, 0])  # Sampling frequency
+#
+# # Select the first microphone signal (first column of Mic12)
+# signal = Mic12[:, 0]
+#
+# # Define the block sizes for PSD estimation
+# NFFT_1 = 1024
+# NFFT_2 = 8192
+#
+# # Calculate the PSD for NFFT = 1024
+# f_1, Pxx_1 = welch(signal, fs=fs, window=np.hanning(NFFT_1), nperseg=NFFT_1, noverlap=int(NFFT_1 * 0.5), scaling='density')
+#
+# # Calculate the PSD for NFFT = 8192
+# f_2, Pxx_2 = welch(signal, fs=fs, window=np.hanning(NFFT_2), nperseg=NFFT_2, noverlap=int(NFFT_2 * 0.5), scaling='density')
+#
+# # Plot the two spectra in the same figure
+# plt.subplot(2, 1, 2)
+# plt.semilogy(f_1, Pxx_1, label='NFFT = 1024')
+# plt.semilogy(f_2, Pxx_2, label='NFFT = 8192')
+# plt.title('PSD of the microphone signal')
+# plt.xlabel('Frequency (Hz)')
+# plt.ylabel('PSD (dB/Hz)')
+# plt.legend()
+# plt.grid(True)
+#
+# plt.tight_layout()
+# plt.savefig('E3_P3_2.eps', format='eps')
+# plt.show()
+#
 
-# Define the signal
-fs = 1000  # Sampling frequency (Hz)
-f = 10     # Frequency of sinusoid (Hz)
-t = np.arange(1, 64001) / fs  # Time vector
-x = np.sin(2 * np.pi * f * t) + np.random.randn(len(t)) / 10  # Noisy sinusoid
 
-# Block sizes
-NFFT_1 = 100
-NFFT_2 = 400
 
-# Perform FFT for NFFT = 100
-fft_result_100 = np.fft.rfft(x[:NFFT_1], NFFT_1)
-frequencies_100 = np.fft.rfftfreq(NFFT_1, d=1/fs)
-magnitude_spectrum_100 = np.abs(fft_result_100)
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import butter, cheby1, ellip, freqz
 
-# Perform FFT for NFFT = 400
-fft_result_400 = np.fft.rfft(x[:NFFT_2], NFFT_2)
-frequencies_400 = np.fft.rfftfreq(NFFT_2, d=1/fs)
-magnitude_spectrum_400 = np.abs(fft_result_400)
+# Filter design parameters
+fs = 1000  # Sampling frequency
+order = 4  # Filter order
+cutoff = 40  # Cutoff frequency (Hz)
+nyquist = fs / 2  # Nyquist frequency
 
-# Plot the spectra
-plt.figure(figsize=(12, 6))
-plt.subplot(2, 1, 1)
-plt.plot(frequencies_100, magnitude_spectrum_100, label='NFFT = 100')
-plt.plot(frequencies_400, magnitude_spectrum_400, label='NFFT = 400')
+# Design different filters
+# 1. Butterworth (No ripple)
+b_butter, a_butter = butter(order, cutoff / nyquist, btype='low')
+w_butter, h_butter = freqz(b_butter, a_butter, worN=8000)
+
+# 2. Chebyshev Type 1 (Ripple in passband)
+rp = 1  # Passband ripple (dB)
+b_cheby1, a_cheby1 = cheby1(order, rp, cutoff / nyquist, btype='low')
+w_cheby1, h_cheby1 = freqz(b_cheby1, a_cheby1, worN=8000)
+
+# 3. Elliptic (Ripple in passband and stopband)
+rp = 1  # Passband ripple (dB)
+rs = 40  # Stopband attenuation (dB)
+b_ellip, a_ellip = ellip(order, rp, rs, cutoff / nyquist, btype='low')
+w_ellip, h_ellip = freqz(b_ellip, a_ellip, worN=8000)
+
+# Plot the magnitude response (dB)
+plt.figure(figsize=(12, 5))
+plt.plot(w_butter * fs / (2 * np.pi), 20 * np.log10(abs(h_butter)), label='Butterworth (No Ripple)', color='blue')
+plt.plot(w_cheby1 * fs / (2 * np.pi), 20 * np.log10(abs(h_cheby1)), label='Chebyshev Type I (Passband Ripple)', color='green')
+plt.plot(w_ellip * fs / (2 * np.pi), 20 * np.log10(abs(h_ellip)), label='Elliptic (Passband + Stopband Ripple)', color='red')
+
+# Draw a line at 0 dB (perfect passband) and -40 dB (stopband attenuation)
+plt.axhline(-40, color='gray', linestyle='--', label='-40 dB (Stopband attenuation)')
+plt.axhline(0, color='gray', linestyle='--', label='0 dB (Passband level)')
+
+plt.xlim(0, 100)  # Focus on 0-100 Hz
+plt.ylim(-60, 5)  # Set y-limits to focus on passband and stopband
 plt.xlabel('Frequency (Hz)')
-plt.ylabel('Magnitude')
-plt.title('Sinusoid signal')
+plt.ylabel('Magnitude (dB)')
 plt.legend()
 plt.grid()
-
-# Load the MATLAB .mat file
-data = loadmat('ImpTube12.mat')
-Mic12 = data['Mic12']
-fs = int(data['fs'][0, 0])  # Sampling frequency
-
-# Select the first microphone signal (first column of Mic12)
-signal = Mic12[:, 0]
-
-# Block sizes
-NFFT_1 = 1024
-NFFT_2 = 8192
-
-# Perform FFT for NFFT = 1024
-fft_result_1024 = np.fft.rfft(signal[:NFFT_1], NFFT_1)
-frequencies_1024 = np.fft.rfftfreq(NFFT_1, d=1/fs)
-magnitude_spectrum_1024 = np.abs(fft_result_1024)
-
-# Perform FFT for NFFT = 8192
-fft_result_8192 = np.fft.rfft(signal[:NFFT_2], NFFT_2)
-frequencies_8192 = np.fft.rfftfreq(NFFT_2, d=1/fs)
-magnitude_spectrum_8192 = np.abs(fft_result_8192)
-
-# Plot the spectra
-plt.subplot(2, 1, 2)
-plt.plot(frequencies_8192, magnitude_spectrum_8192, label='NFFT = 8192')
-plt.plot(frequencies_1024, magnitude_spectrum_1024, label='NFFT = 1024')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Magnitude')
-plt.title('Microphone signal')
-plt.legend()
-plt.grid(True)
-
 plt.tight_layout()
-plt.savefig('E3_P3_1.eps', format='eps')
+plt.savefig('E4_P4_3.eps', format='eps')
 plt.show()
-
-# Generate the sinusoidal signal with added noise
-f = 10  # Frequency in Hz
-t = np.arange(1, 64001) / 1000  # Time vector (1 ms sampling rate)
-x = np.sin(2 * np.pi * f * t) + np.random.randn(len(t)) / 10  # Signal with noise
-
-# Define the block sizes for PSD estimation
-NFFT_1 = 100
-NFFT_2 = 400
-
-# Calculate the PSD for NFFT = 100
-f_1, Pxx_1 = welch(x, fs=1000, window=np.hanning(NFFT_1), nperseg=NFFT_1, noverlap=int(NFFT_1 * 0.5), scaling='density')
-
-# Calculate the PSD for NFFT = 400
-f_2, Pxx_2 = welch(x, fs=1000, window=np.hanning(NFFT_2), nperseg=NFFT_2, noverlap=int(NFFT_2 * 0.5), scaling='density')
-
-# Plot the two spectra in the same figure
-plt.figure(figsize=(12, 6))
-plt.subplot(2, 1, 1)
-plt.semilogy(f_1, Pxx_1, label='NFFT = 100')
-plt.semilogy(f_2, Pxx_2, label='NFFT = 400')
-plt.title('PSD of sinusoidal signal')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('PSD (dB/Hz)')
-plt.legend()
-plt.grid(True)
-
-data = loadmat('ImpTube12.mat')
-Mic12 = data['Mic12']
-fs = int(data['fs'][0, 0])  # Sampling frequency
-
-# Select the first microphone signal (first column of Mic12)
-signal = Mic12[:, 0]
-
-# Define the block sizes for PSD estimation
-NFFT_1 = 1024
-NFFT_2 = 8192
-
-# Calculate the PSD for NFFT = 1024
-f_1, Pxx_1 = welch(signal, fs=fs, window=np.hanning(NFFT_1), nperseg=NFFT_1, noverlap=int(NFFT_1 * 0.5), scaling='density')
-
-# Calculate the PSD for NFFT = 8192
-f_2, Pxx_2 = welch(signal, fs=fs, window=np.hanning(NFFT_2), nperseg=NFFT_2, noverlap=int(NFFT_2 * 0.5), scaling='density')
-
-# Plot the two spectra in the same figure
-plt.subplot(2, 1, 2)
-plt.semilogy(f_1, Pxx_1, label='NFFT = 1024')
-plt.semilogy(f_2, Pxx_2, label='NFFT = 8192')
-plt.title('PSD of the microphone signal')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('PSD (dB/Hz)')
-plt.legend()
-plt.grid(True)
-
-plt.tight_layout()
-plt.savefig('E3_P3_2.eps', format='eps')
-plt.show()
-
-
-
-
