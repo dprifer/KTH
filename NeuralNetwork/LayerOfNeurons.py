@@ -36,9 +36,9 @@ print(outputs)
 
 ## We can also use a loop to do the same
 
-weights = [[0.2, 0.8, -0.5, 1],
-           [0.5, -0.91, 0.26, -0.5],
-           [-0.26, -0.27, 0.17, 0.87]]
+weights = [[0.2, 0.8, -0.5, 1],         # Neuron 1
+           [0.5, -0.91, 0.26, -0.5],    # Neuron 2
+           [-0.26, -0.27, 0.17, 0.87]]  # Neuron 3
 
 biases = [2, 3, 0.5]
 
@@ -59,7 +59,27 @@ for neuron_weights, neuron_bias in zip(weights, biases):
 print(layer_outputs)
 
 
+#########
 ### NumPy
 
+# Qpplied theories: dot product, vector addition
 layer_outputs = np.dot(weights, inputs) + biases
 print(layer_outputs)
+
+
+# Adding a batch of data
+# When inputs is a vector and weights is matrix --> dot product can be used that results in a vector
+# When input is also a matrix --> dot product on all vectors from input and weight matrices --> matrix product
+# It takes all combination of rows and columns. To make them compatible, weight matrix must be transposed
+
+inputs = [[1, 2, 3, 2.5],           # sample 1
+          [2, 5, -1, 2],            # sample 2
+          [-1.5, 2.7, 3.3, -0.8]]   # sample 3
+
+# The output matrix consists of all atomic dot products, i.e. the outputs of all neurons after each sample
+outputs = np.dot(inputs, np.array(weights).T) + biases
+# We want to have a list of layer outputs per each sample than a list of neurons and their sample-wise outputs --> weight is the second term
+
+print(outputs)
+
+

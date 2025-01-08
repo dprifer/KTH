@@ -17,6 +17,8 @@ output = (inputs[0]*weights[0] +
 
 print(output)
 
+
+#########
 ### NumPy
 
 outputs = np.dot(weights, inputs) + bias
