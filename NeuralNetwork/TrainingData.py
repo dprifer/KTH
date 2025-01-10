@@ -54,6 +54,47 @@ class Activation_Softmax:
         self.output = probabilities
 
 
+# Common loss class
+class Loss:
+
+    # Calculates the data and regularization losses
+    # given model output and ground truth values
+    def calculate(self, output, y):
+        # Calculate sample losses
+        sample_losses = self.forward(output, y)
+
+        # calculate mean loss
+        data_loss = np.mean(sample_losses)
+
+        # Return loss
+        return data_loss
+
+
+# Temporary loss class for cross-entropy
+# Inherits Loss class
+class Loss_CategoricalCrossentropy(Loss):
+
+    # Forward pass
+    def forward(self, y_pred, y_true):
+        # Number of samples in a batch
+        samples = len(y_pred)
+
+        # Clip both sides to prevent division by 0 and not to drag mean towards any value
+        y_pred_clipped = np.clip(y_pred, 1e-7, 1 - 1e-7)
+
+        # Probabilities for target values - categorical labels
+        if len(y_true.shape) == 1:
+            correct_confidences = y_pred_clipped[range(samples), y_true]
+
+        # Mask values - for hot-encoded labels
+        elif len(y_true.shape) == 2:
+            correct_confidences = np.sum(y_pred_clipped * y_true, axis=1)
+
+        # Losses
+        negative_log_likelihoods = -np.log(correct_confidences)
+        return negative_log_likelihoods
+
+
 # Create dataset
 X, y = spiral_data(samples=100, classes=3)
 
@@ -68,6 +109,9 @@ dense2 = Layer_Dense(3, 3)
 
 # Softmax activation
 activation2 = Activation_Softmax()
+
+# Create loss function
+loss_function = Loss_CategoricalCrossentropy()
 
 # Perform a foward pass of training data through this layer
 dense1.forward(X)
@@ -87,6 +131,12 @@ print(activation2.output[:5])
 # At this point, the model is random. The classes are predicted with equal probability due to the random normally distributed weights and zeroed biases.
 # Need the loss function to determine how wrong the neural network is, and begin adjusting the weights and biases
 
+# Perform forward pass through loss function
+# it takes the output of second dense layer here and returns loss
+loss = loss_function.calculate(activation2.output, y)
+
+# Print loss values
+print('Loss: ', loss)
 
 
 
