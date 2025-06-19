@@ -1,4 +1,3 @@
-from openpyxl import Workbook
 import pandas as pd
 import streamlit as st
 
@@ -202,19 +201,3 @@ if st.button("Rugok keresese"):
     # Optional: Download as CSV
     csv = df.to_csv(index=False)
     st.download_button("Download CSV", csv, file_name="rugok.csv", mime="text/csv")
-
-
-
-# # Print results
-# wb = Workbook()
-# ws = wb.active
-#
-# headers = ['L0', 'Lc1', 'Lc2', 'd1', 'd2', 'D1', 'D2', 'n1', 'n2', 'R1', 'R2', 'tauc1', 'tauc2', 'w1', 'w2', 'Sn1', 'Sn2', 'L2', 's2']
-#
-# # Write data to the worksheet
-# ws.append(headers)
-# for spring in good_springs:
-#     ws.append(spring)
-#
-# # Save the workbook to a file
-# wb.save(r'C:\Users\prife\Documents\GANZ\output.xlsx')
