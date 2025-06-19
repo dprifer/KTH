@@ -186,9 +186,9 @@ if st.button("Rugok keresese"):
         G=G
     ):
         good_springs = partial_results  # Updated list
-        #percent = int(iter / total * 100)
-        #progress.progress(percent)
-        status.text(f"Turelem... {len(good_springs)} rugot talaltam eddig.")
+        percent = int(iter / total * 100)
+        progress.progress(percent)
+        status.text(f"Turelem, {total} iteraciot kell vegigszamolni... {len(good_springs)} rugot talaltam eddig.")
 
 
     st.success(f"{len(good_springs)} megfelelo rugot talaltam")
