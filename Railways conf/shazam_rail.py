@@ -74,8 +74,8 @@ def stft(sensor_data, fs=50, window_length = 4, window_type = 'hann', overlap = 
 
     :param fs: sampling rate of simulation Hz
     :param window_length: seconds
-    :param window_type:
-    :param overlap: "percent" overlap of consecutive windows
+    :param window_type: select from scipy.signal.windows._windows
+    :param overlap: overlap of consecutive windows [0-1]
     :param fft_size: must be power of 2 for efficiency
     :return:
     """
@@ -83,7 +83,7 @@ def stft(sensor_data, fs=50, window_length = 4, window_type = 'hann', overlap = 
     # pre-computing
     Nx = int(window_length * fs)  # number of samples in a window
     window = get_window(window_type, Nx)  # precompute window
-    stride = int(Nx * (1 - overlap))  # number of samples the sliding window slides forward
+    stride = int(round(Nx * (1 - overlap)))  # number of samples the sliding window slides forward
     noverlap = Nx - stride
     freqs = np.fft.rfftfreq(fft_size, 1.0 / fs)
 
@@ -117,6 +117,28 @@ def stft(sensor_data, fs=50, window_length = 4, window_type = 'hann', overlap = 
 
         stft_results[sensor_name] = {"f": f, "t": t, "Zxx": Zxx, "stft_magnitude": stft_magnitude}
 
+    # remove first and last "false" frames
+    n_discard = int(np.ceil((Nx / 2) / stride))+1
+    print(f'Removing {n_discard} frames out of {next(iter(stft_results.values()))['Zxx'].shape[1]} to combat edge effect')
+    for sensor_name, stft_data in stft_results.items():
+        Zxx = stft_data["Zxx"]
+        t = stft_data["t"]
+
+        Zxx_trim = Zxx[:, n_discard:-n_discard]
+        t_trim = t[n_discard:-n_discard]
+        stft_magnitude_trim = np.abs(Zxx_trim)
+
+        stft_results[sensor_name]["Zxx"] = Zxx_trim
+        stft_results[sensor_name]["t"] = t_trim
+        stft_results[sensor_name]["stft_magnitude"] = stft_magnitude_trim
+
+    t_any = next(iter(stft_results.values()))['t']  # for a clean look
+    print(f'New length: {t_any[-1]-t_any[0]} seconds')
+    print(f'New number of time windows: {len(t_any)}')
+    print(f'Number of frequencies: {next(iter(stft_results.values()))['Zxx'].shape[0]}')
+    print(f'Frequency bin spacing in a frame: {fs / fft_size}')
+    print(f'True frequency resolution with Hann window: {4 * fs / int(window_length * fs)} (i.e. spectral peak width)')
+
     return stft_results, freqs, sensor_data_detrended
 
 
@@ -134,20 +156,23 @@ def peaks(stft_magnitude, time_frames, peaks_per_frame, freqs):
     #######################
     body_mode = (0.5, 2.0)  # Carbody body bounce mode
     suspension = (5.0, 9.0)  # Bogie bounce modes
+    wheelset = (9.4, 9.7)  # Wheelset rotational frequency
     high_freq = (12.0, 25.0)  # High-frequency
 
     body_mode_weight: float = 1.5
     suspension_weight: float = 1.2
+    wheelset_weight: float = 0.05
     high_freq_weight: float = 0.5  # giving less importance to high frequency "noise"
-
-    #######################
 
     # precomputing
     bands = [
         (body_mode, body_mode_weight),
         (suspension, suspension_weight),
+        (wheelset, wheelset_weight),
         (high_freq, high_freq_weight),
     ]
+
+    #######################
 
     band_masks = {}
     band_weights = {}
@@ -279,7 +304,7 @@ def fingerprinting(time_window_sec, freq_quantization_hz, time_quantization_sec,
 
 
 """ Real stuff """
-# Compute signal STFT
+# Compute signal STFT for frame
 def compute_stft(signal_array):
 
     # HARDCODED STUFF
@@ -294,7 +319,7 @@ def compute_stft(signal_array):
 
     Nx = int(window_length * fs)  # number of samples in a window
     window = get_window(window_type, Nx)  # precompute window
-    stride = int(Nx * (1 - overlap))  # number of samples the sliding window slides forward
+    stride = int(round(Nx * (1 - overlap)))  # number of samples the sliding window slides forward
     noverlap = Nx - stride
 
     #################
@@ -314,16 +339,88 @@ def compute_stft(signal_array):
     # Return magnitude spectrogram and time vector
     stft_magnitude = np.abs(Zxx)
 
+    # # remove first and last "false" frames
+    n_discard = int(np.ceil((Nx / 2) / stride)) + 1  # 6
+    if stft_magnitude.shape[1] > 2 * n_discard:
+        stft_magnitude = stft_magnitude[:, n_discard:-n_discard]
+        t = t[n_discard:-n_discard]
+
+
     return stft_magnitude, t, freqs
 
 
 # Evaluate segment
 def process_signal(signal_array):
 
-    stft_magnitude, time_frames, freqs = compute_stft(signal_array)
-    pks = peaks(stft_magnitude, time_frames, 5, freqs)
+    stft_magnitude, frame_times, freqs = compute_stft(signal_array)
+    pks, _, _ = peaks(stft_magnitude, frame_times, 5, freqs)
 
-    return stft_magnitude, pks, time_frames
+    return stft_magnitude, pks, frame_times, freqs
+
+
+def gen_fingerprints_from_peaks(peaks):
+    """Generate fingerprints (peak pairs) from a list of peaks.
+
+    Args:
+        peaks: List of (freq_hz, time_sec, magnitude) tuples
+
+    Returns:
+        Dictionary mapping quantized hash tuples to list of anchor times
+    """
+
+    # HARDCODED STUFF
+    #################
+    time_window_sec = 2  # Time window forward of anchor peak for finding targets (seconds)
+    freq_quantization_hz = 1.0  # Frequency quantization bin size (Hz) so bin number corresponds to frequency
+    time_quantization_sec = 0.1  # Time quantization bin size (seconds): 100 ms
+
+    # precomputing
+    time_quantization_bins = int(time_window_sec / time_quantization_sec)  # Number of time bins
+    freq_quantization_bins = int((25.0 - 0.5) / freq_quantization_hz) + 1  # Number of frequency bins in 0.5-25 Hz range.
+
+    #################
+
+    if len(peaks) < 2:
+        return {}
+
+    # Convert to Peak objects
+    Peak = namedtuple("Peak", ["freq_hz", "time_sec", "magnitude"])
+    peak_objs = [Peak(freq, time, mag) for freq, time, mag in peaks]
+
+    fingerprints = {}
+
+    # For each peak as anchor
+    for i, anchor in enumerate(peak_objs):
+        # Find target peaks within time window
+        time_max = anchor.time_sec + time_window_sec
+
+        for j, target in enumerate(peak_objs):
+            # Skip self-pairing
+            if i == j:
+                continue
+
+            # Check time constraint
+            if target.time_sec <= anchor.time_sec or target.time_sec > time_max:
+                continue
+
+            # Create quantized peak pair hash
+            time_delta = target.time_sec - anchor.time_sec
+            freq_1_bin = int(round(anchor.freq_hz / freq_quantization_hz))  # Quantize frequencies towards representative value
+            freq_2_bin = int(round(target.freq_hz / freq_quantization_hz))
+            time_bin = int(round(time_delta / time_quantization_sec))  # Quantize time delta
+
+            freq_1_bin = np.clip(freq_1_bin, 0, freq_quantization_bins - 1)  # Clamp to valid ranges
+            freq_2_bin = np.clip(freq_2_bin, 0, freq_quantization_bins - 1)
+            time_bin = np.clip(time_bin, 0, time_quantization_bins - 1)
+
+            hash_tuple = (freq_1_bin, freq_2_bin, time_bin)
+
+            # Store anchor time for later matching
+            if hash_tuple not in fingerprints:
+                fingerprints[hash_tuple] = []
+            fingerprints[hash_tuple].append(anchor.time_sec)
+
+    return fingerprints
 
 
 # Database building
@@ -361,6 +458,79 @@ class FingerprintDatabase:
             self.db[sensor_name] = defaultdict(list)
         self.db[sensor_name][hash_tuple].append(record)
 
+    def add_fingerprints_batch(self, fingerprints,scenario_name, segment_index, sensor_name, frame_time_sec):
+        """Add multiple fingerprints from one segment.
+
+        Args:
+            fingerprints: From FingerprintGenerator.generate_fingerprints_from_peaks()
+            scenario_name: Scenario identifier
+            segment_index: Segment index
+            sensor_name: Sensor identifier
+            frame_time_sec: Time of first frame in segment
+        """
+        for hash_tuple, anchor_times in fingerprints.items():
+            for anchor_time in anchor_times:
+                self.add_fingerprint(
+                    hash_tuple,
+                    scenario_name,
+                    segment_index,
+                    sensor_name,
+                    anchor_time,
+                    frame_time_sec,
+                )
+
+    def get_statistics(self):
+        """Compute database statistics.
+
+        Returns:
+            Dictionary with database statistics
+        """
+        num_unique_hashes = sum(len(db) for db in self.db.values())
+        num_entries = sum(
+            sum(len(records) for records in db.values())
+            for db in self.db.values()
+        )
+
+        stats = {
+            "num_scenarios": len(self.scenario_names),
+            "scenario_names": sorted(self.scenario_names),
+            "num_sensors": len(self.sensor_names),
+            "sensor_names": sorted(self.sensor_names),
+            "unique_hashes": num_unique_hashes,
+            "total_entries": num_entries,
+            "avg_entries_per_hash": num_entries / num_unique_hashes if num_unique_hashes > 0 else 0,
+        }
+
+        return stats
+
+    def match_fingerprints(self, sample_fingerprints, sensor_name):
+        """Match a sample's fingerprints against database.
+
+        Args:
+            sample_fingerprints: Fingerprints from unknown sample
+            sensor_name: If not combining sensors, specify which sensor database to query
+
+        Returns:
+            Dictionary mapping scenario name to number of matching hashes
+        """
+        match_counts = defaultdict(int)
+
+        if sensor_name is None:
+            raise ValueError("sensor_name required when not combining sensors")
+        if sensor_name not in self.db:
+            raise ValueError(f"Unknown sensor: {sensor_name}")
+        query_db = self.db[sensor_name]
+
+        # Count matches per scenario
+        for hash_tuple in sample_fingerprints.keys():
+            if hash_tuple in query_db:
+                # This sample hash matches database hashes
+                records = query_db[hash_tuple]
+
+                for scenario_name, segment_idx, sensor, anchor_time, frame_time in records:
+                    match_counts[scenario_name] += 1
+
+        return dict(match_counts)
 
 
 
