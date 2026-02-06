@@ -28,22 +28,13 @@ class FingerprintDatabaseEntry:
 class FingerprintDatabase:
     """Database for storing and matching fingerprints."""
     
-    def __init__(self, combine_sensors: bool = True):
-        """Initialize fingerprint database.
-        
-        Args:
-            combine_sensors: If True, combine fingerprints from all sensors.
-                           If False, maintain separate databases per sensor.
-        """
-        self.combine_sensors = combine_sensors
-        
-        # Main storage: {hash_tuple -> [(scenario, segment_idx, sensor, time), ...]}
+    def __init__(self):
+        """Initialize fingerprint database"""
+
         # Or if not combining sensors: {sensor -> {hash_tuple -> [(scenario, segment_idx, time), ...]}}
         
-        if combine_sensors:
-            self.db = defaultdict(list)  # Combined database
-        else:
-            self.db = {}  # Separate dbs per sensor
+
+        self.db = {}  # Separate dbs per sensor
         
         # Metadata for reconstruction
         self.scenario_names = set()
@@ -73,13 +64,10 @@ class FingerprintDatabase:
         self.sensor_names.add(sensor_name)
         
         record = (scenario_name, segment_index, sensor_name, anchor_time_sec, frame_time_sec)
-        
-        if self.combine_sensors:
-            self.db[hash_tuple].append(record)
-        else:
-            if sensor_name not in self.db:
-                self.db[sensor_name] = defaultdict(list)
-            self.db[sensor_name][hash_tuple].append(record)
+
+        if sensor_name not in self.db:
+            self.db[sensor_name] = defaultdict(list)
+        self.db[sensor_name][hash_tuple].append(record)
     
     def add_fingerprints_batch(
         self,
@@ -124,15 +112,12 @@ class FingerprintDatabase:
             Dictionary mapping scenario name to number of matching hashes
         """
         match_counts = defaultdict(int)
-        
-        if self.combine_sensors:
-            query_db = self.db
-        else:
-            if sensor_name is None:
-                raise ValueError("sensor_name required when not combining sensors")
-            if sensor_name not in self.db:
-                raise ValueError(f"Unknown sensor: {sensor_name}")
-            query_db = self.db[sensor_name]
+
+        if sensor_name is None:
+            raise ValueError("sensor_name required when not combining sensors")
+        if sensor_name not in self.db:
+            raise ValueError(f"Unknown sensor: {sensor_name}")
+        query_db = self.db[sensor_name]
         
         # Count matches per scenario
         for hash_tuple in sample_fingerprints.keys():
@@ -159,16 +144,13 @@ class FingerprintDatabase:
         Returns:
             Dictionary mapping scenario name to list of (segment_idx, match_count, frame_time) tuples
         """
-        matches = defaultdict(lambda: defaultdict(int))
-        
-        if self.combine_sensors:
-            query_db = self.db
-        else:
-            if sensor_name is None:
-                raise ValueError("sensor_name required when not combining sensors")
-            if sensor_name not in self.db:
-                raise ValueError(f"Unknown sensor: {sensor_name}")
-            query_db = self.db[sensor_name]
+        matches = defaultdict(int)
+
+        if sensor_name is None:
+            raise ValueError("sensor_name required when not combining sensors")
+        if sensor_name not in self.db:
+            raise ValueError(f"Unknown sensor: {sensor_name}")
+        query_db = self.db[sensor_name]
         
         # Build detailed matches
         for hash_tuple in sample_fingerprints.keys():
@@ -182,10 +164,6 @@ class FingerprintDatabase:
         # Reshape: {scenario -> [(segment_idx, count, time), ...]}
         result = defaultdict(list)
         for (scenario, segment_idx), count in matches.items():
-            # Retrieve time (use last record for time)
-            if self.combine_sensors:
-                query_db_scenario = [r for r in self.db.values() 
-                                   if any(s == scenario for s, _, _, _, _ in r)]
             result[scenario].append((segment_idx, count))
         
         return dict(result)
@@ -196,18 +174,13 @@ class FingerprintDatabase:
         Returns:
             Dictionary with database statistics
         """
-        if self.combine_sensors:
-            num_unique_hashes = len(self.db)
-            num_entries = sum(len(records) for records in self.db.values())
-        else:
-            num_unique_hashes = sum(len(db) for db in self.db.values())
-            num_entries = sum(
-                sum(len(records) for records in db.values()) 
-                for db in self.db.values()
-            )
+        num_unique_hashes = sum(len(db) for db in self.db.values())
+        num_entries = sum(
+            sum(len(records) for records in db.values())
+            for db in self.db.values()
+        )
         
         stats = {
-            "combine_sensors": self.combine_sensors,
             "num_scenarios": len(self.scenario_names),
             "scenario_names": sorted(self.scenario_names),
             "num_sensors": len(self.sensor_names),
@@ -228,7 +201,6 @@ class FingerprintDatabase:
         with open(filepath, 'wb') as f:
             pickle.dump({
                 'db': dict(self.db) if isinstance(self.db, defaultdict) else self.db,
-                'combine_sensors': self.combine_sensors,
                 'scenario_names': self.scenario_names,
                 'sensor_names': self.sensor_names,
             }, f)
@@ -246,8 +218,8 @@ class FingerprintDatabase:
         with open(filepath, 'rb') as f:
             data = pickle.load(f)
         
-        db = cls(combine_sensors=data['combine_sensors'])
-        db.db = defaultdict(list, data['db']) if db.combine_sensors else data['db']
+        db = cls()
+        db.db = data['db']
         db.scenario_names = data['scenario_names']
         db.sensor_names = data['sensor_names']
         
