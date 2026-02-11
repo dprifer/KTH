@@ -80,19 +80,19 @@ def peaks(stft_magnitude, time_frames, peaks_per_frame, freqs):
     #######################
     body_mode = (0.5, 2.0)  # Carbody body bounce mode
     suspension = (5.0, 9.0)  # Bogie bounce modes
-    wheelset = (9.4, 9.7)  # Wheelset rotational frequency
+    # wheelset = (9.4, 9.7)  # Wheelset rotational frequency
     high_freq = (12.0, 25.0)  # High-frequency
 
     body_mode_weight: float = 1.5
     suspension_weight: float = 1.2
-    wheelset_weight: float = 0.05
+    # wheelset_weight: float = 0.05
     high_freq_weight: float = 0.5  # giving less importance to high frequency "noise"
 
     # precomputing
     bands = [
         (body_mode, body_mode_weight),
         (suspension, suspension_weight),
-        (wheelset, wheelset_weight),
+        # (wheelset, wheelset_weight),
         (high_freq, high_freq_weight),
     ]
 
@@ -218,7 +218,7 @@ def gen_fingerprints_from_peaks(peaks):
     #################
     time_window_sec = 2  # Time window forward of anchor peak for finding targets (seconds)
     freq_quantization_hz = 1.0  # Frequency quantization bin size (Hz) so bin number corresponds to frequency
-    time_quantization_sec = 0.1  # Time quantization bin size (seconds): 100 ms
+    time_quantization_sec = 0.5  # Time quantization bin size (seconds): 500 ms -- time resolution of STFT is 400 ms
 
     # precomputing
     time_quantization_bins = int(time_window_sec / time_quantization_sec)  # Number of time bins
